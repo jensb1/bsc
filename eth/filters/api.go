@@ -29,6 +29,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/gopool"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/event"
@@ -115,7 +116,8 @@ func (api *PublicFilterAPI) timeoutLoop(timeout time.Duration) {
 func (api *PublicFilterAPI) NewPendingTransactionFilter() rpc.ID {
 	var (
 		pendingTxs   = make(chan []common.Hash)
-		pendingTxSub = api.events.SubscribePendingTxs(pendingTxs)
+		txsEvents    = make(chan []core.NewTxsEvent)
+		pendingTxSub = api.events.SubscribePendingTxs(pendingTxs, txsEvents)
 	)
 	api.filtersMu.Lock()
 	api.filters[pendingTxSub.ID] = &filter{typ: PendingTransactionsSubscription, deadline: time.NewTimer(api.timeout), hashes: make([]common.Hash, 0), s: pendingTxSub}
@@ -153,12 +155,13 @@ func (api *PublicFilterAPI) NewPendingTransactions(ctx context.Context) (*rpc.Su
 	rpcSub := notifier.CreateSubscription()
 
 	gopool.Submit(func() {
-		txHashes := make(chan []common.Hash, 128)
-		pendingTxSub := api.events.SubscribePendingTxs(txHashes)
+		txHashes := make(chan []common.Hash, 128) // JB_TODO: change to hash
+		txsEvents := make(chan []core.NewTxsEvent, 128)
+		pendingTxSub := api.events.SubscribePendingTxs(txHashes, txsEvents)
 
 		for {
 			select {
-			case hashes := <-txHashes:
+			case hashes := <-txsEvents: //<-txHashes:
 				// To keep the original behaviour, send a single tx hash in one notification.
 				// TODO(rjl493456442) Send a batch of tx hashes in one notification
 				for _, h := range hashes {
