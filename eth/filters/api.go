@@ -160,6 +160,7 @@ func (api *PublicFilterAPI) NewPendingTransactions(ctx context.Context) (*rpc.Su
 
 		for {
 			select {
+			case <-txHashes: //<-txHashes:
 			case hashes := <-txsEvents: //<-txHashes:
 				// To keep the original behaviour, send a single tx hash in one notification.
 				// TODO(rjl493456442) Send a batch of tx hashes in one notification
