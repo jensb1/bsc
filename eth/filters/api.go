@@ -29,7 +29,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/gopool"
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/event"
@@ -116,7 +115,7 @@ func (api *PublicFilterAPI) timeoutLoop(timeout time.Duration) {
 func (api *PublicFilterAPI) NewPendingTransactionFilter() rpc.ID {
 	var (
 		pendingTxs   = make(chan []common.Hash)
-		txsEvents    = make(chan []core.NewTxsEvent)
+		txsEvents    = make(chan []*types.Transaction)
 		pendingTxSub = api.events.SubscribePendingTxs(pendingTxs, txsEvents)
 	)
 	api.filtersMu.Lock()
@@ -156,7 +155,7 @@ func (api *PublicFilterAPI) NewPendingTransactions(ctx context.Context) (*rpc.Su
 
 	gopool.Submit(func() {
 		txHashes := make(chan []common.Hash, 128) // JB_TODO: change to hash
-		txsEvents := make(chan []core.NewTxsEvent, 128)
+		txsEvents := make(chan []*types.Transaction, 128)
 		pendingTxSub := api.events.SubscribePendingTxs(txHashes, txsEvents)
 
 		for {

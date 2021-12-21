@@ -75,7 +75,7 @@ type subscription struct {
 	logsCrit  ethereum.FilterQuery
 	logs      chan []*types.Log
 	hashes    chan []common.Hash
-	txsEvents chan []core.NewTxsEvent
+	txsEvents chan []*types.Transaction
 	headers   chan *types.Header
 	installed chan struct{} // closed when the filter is installed
 	err       chan error    // closed when the filter is uninstalled
@@ -294,7 +294,7 @@ func (es *EventSystem) SubscribeNewHeads(headers chan *types.Header) *Subscripti
 
 // SubscribePendingTxs creates a subscription that writes transaction hashes for
 // transactions that enter the transaction pool.
-func (es *EventSystem) SubscribePendingTxs(hashes chan []common.Hash, txsEvents chan []core.NewTxsEvent) *Subscription {
+func (es *EventSystem) SubscribePendingTxs(hashes chan []common.Hash, txsEvents chan []*types.Transaction) *Subscription {
 	sub := &subscription{
 		id:        rpc.NewID(),
 		typ:       PendingTransactionsSubscription,
@@ -346,10 +346,10 @@ func (es *EventSystem) handleRemovedLogs(filters filterIndex, ev core.RemovedLog
 
 func (es *EventSystem) handleTxsEvent(filters filterIndex, ev core.NewTxsEvent) {
 	hashes := make([]common.Hash, 0, len(ev.Txs))
-	txsEvents := make([]core.NewTxsEvent, 0, len(ev.Txs))
+	txsEvents := make([]*types.Transaction, 0, len(ev.Txs))
 	for _, tx := range ev.Txs {
 		hashes = append(hashes, tx.Hash())
-		txsEvents = append(txsEvents, ev)
+		txsEvents = append(txsEvents, tx)
 	}
 	for _, f := range filters[PendingTransactionsSubscription] {
 		f.hashes <- hashes
